@@ -61,6 +61,14 @@ public sealed class CursorState
     {
         if (IsHidden)
         {
+            // The mouse hook can miss moves: Windows doesn't show it input going to apps running as admin.
+            if (MovedFar(cursor))
+            {
+                IsHidden = false;
+                _lastMouse = now;
+                return CursorAction.Show;
+            }
+
             if (!_hiddenByTyping || _settings.ShowAfterTypingSeconds <= 0 ||
                 now - _lastKey < _settings.ShowAfterTypingSeconds * 1000L)
                 return CursorAction.None;

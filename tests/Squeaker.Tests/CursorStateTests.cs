@@ -60,6 +60,19 @@ public sealed class CursorStateTests
     }
 
     [Fact]
+    public void Timer_Shows_WhenTheHookMissedTheMove()
+    {
+        var state = Make(s => { s.HideOnIdle = true; s.IdleSeconds = 2; });
+        state.OnKey(10, Origin, KeyA, false);
+
+        Assert.Equal(CursorAction.None, state.OnTimer(100, new(101, 100)));
+        Assert.Equal(CursorAction.Show, state.OnTimer(200, new(110, 100)));
+        // Counts as mouse activity, so idle hiding waits a full delay.
+        Assert.Equal(CursorAction.None, state.OnTimer(2100, new(110, 100)));
+        Assert.Equal(CursorAction.Hide, state.OnTimer(2200, new(110, 100)));
+    }
+
+    [Fact]
     public void Click_Shows_WithoutMoving()
     {
         var state = Make();

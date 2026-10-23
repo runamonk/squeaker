@@ -62,5 +62,6 @@ The icon and logos are drawn by `branding/make_branding.py` (needs Pillow):
 - Don't run it alongside PowerToys' CursorHide or the old zuulMouse; they'd fight over the cursor.
 - Windows' own *Hide pointer while typing* (Mouse Properties > Pointer Options) overrides some
   options in older apps like Notepad. If it's on, Settings says so and can turn it off.
-- Squeaker runs as a normal user, so typing in an app running as administrator may not hide the
-  cursor.
+- Squeaker runs as a normal user, and Windows doesn't let it see input going to apps running as
+  administrator. Typing in one won't hide the cursor, and clicking in one won't bring it back;
+  moving the mouse always does (Squeaker checks where the cursor is every 100ms as well).
