@@ -18,7 +18,11 @@ cursor gets out of the way; touch the mouse and it's back.
 - **Hide when idle** (optional): hides after the mouse hasn't moved for 1–60 seconds.
 - **Comes back** when you move the mouse further than a couple of pixels, click or scroll; or,
   optionally, a few seconds after you stop typing.
-- **Excluded apps:** never hides while one of them is in front.
+- **Steps aside for games.** While a full-screen app is in front (a game, exclusive or
+  borderless, or a full-screen video), Squeaker lets go of the keyboard and mouse completely: no
+  hooks, so nothing added to mouse latency and no flickering cursor. It checks twice a second.
+- **Excluded apps:** it steps aside the same way for these. Add windowed games here.
+- **Pause hotkey:** Ctrl+Alt+Shift+M pauses and resumes it; change it in Settings.
 - **Never gets stuck hidden.** A small watchdog copy of Squeaker waits for it to exit, however it
   goes (a crash, End task), and puts the cursors back.
 
@@ -41,7 +45,7 @@ Everything lives in `%AppData%\Squeaker`:
 | File | What |
 | --- | --- |
 | `settings.json` | Options. Safe to hand-edit; restart Squeaker afterwards. |
-| `squeaker.log` | Starts, and anything that went wrong. |
+| `squeaker.log` | Starts, pauses, when it steps aside and for what, and anything that went wrong. |
 
 ## Building
 

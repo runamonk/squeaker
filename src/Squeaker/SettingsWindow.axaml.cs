@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Squeaker.Core;
 
@@ -27,6 +28,10 @@ public partial class SettingsWindow : Window
         MoveThresholdBox.Value = settings.MoveThreshold;
         ShowAfterTypingBox.Value = settings.ShowAfterTypingSeconds;
         ExcludedBox.Text = string.Join(Environment.NewLine, settings.ExcludedApps);
+        StepAsideBox.IsChecked = settings.StepAsideForFullScreen;
+        PauseHotkeyBox.Text = settings.PauseHotkey;
+        // Tunnel, so the keys never reach the box as typing.
+        PauseHotkeyBox.AddHandler(KeyDownEvent, PauseHotkey_KeyDown, RoutingStrategies.Tunnel);
         WindowsHidingPanel.IsVisible = CursorHider.WindowsHidesWhileTyping;
 
         // The options that only matter with their parent switched on.
@@ -54,6 +59,8 @@ public partial class SettingsWindow : Window
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+        _settings.StepAsideForFullScreen = StepAsideBox.IsChecked == true;
+        _settings.PauseHotkey = PauseHotkeyBox.Text ?? "";
         _settings.Normalize();
         _save();
 
@@ -71,6 +78,35 @@ public partial class SettingsWindow : Window
         }
         Close();
     }
+
+    void PauseHotkey_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Tab or Key.Escape) return; // Leave those for moving on and closing.
+        e.Handled = true;
+        if (e.Key is Key.Back or Key.Delete)
+        {
+            PauseHotkeyBox.Text = "";
+            return;
+        }
+
+        // Ctrl, Alt and the like on their own: wait for the real key.
+        string? key = e.Key switch
+        {
+            >= Key.A and <= Key.Z or >= Key.F1 and <= Key.F24 => e.Key.ToString(),
+            >= Key.D0 and <= Key.D9 => ((char)('0' + (e.Key - Key.D0))).ToString(),
+            _ => null,
+        };
+        if (key is null) return;
+
+        uint modifiers = 0;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= HotkeyText.Ctrl;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= HotkeyText.Alt;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= HotkeyText.Shift;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Meta)) modifiers |= HotkeyText.Win;
+        if (HotkeyText.Format(modifiers, key) is { } text) PauseHotkeyBox.Text = text;
+    }
+
+    void ClearHotkey_Click(object? sender, RoutedEventArgs e) => PauseHotkeyBox.Text = "";
 
     // Takes effect straight away, not on Save: it's a Windows setting, not one of ours.
     void TurnOffWindowsHiding_Click(object? sender, RoutedEventArgs e)

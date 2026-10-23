@@ -13,6 +13,8 @@ public partial class App : Application
     SqueakerSettings _settings = new();
     CursorWatcher? _watcher;
     SettingsWindow? _settingsWindow;
+    Hotkey? _pauseHotkey;
+    string _pauseHotkeyText = "";
     bool _paused;
 
     public override void Initialize()
@@ -26,7 +28,11 @@ public partial class App : Application
         {
             // Tray only, no main window.
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            desktop.Exit += (_, _) => _watcher?.Dispose();
+            desktop.Exit += (_, _) =>
+            {
+                _watcher?.Dispose();
+                _pauseHotkey?.Dispose();
+            };
 
             _settings = SqueakerSettings.Load(AppPaths.SettingsFile, out var problem);
             if (problem is not null) Log.Write(problem);
@@ -61,12 +67,34 @@ public partial class App : Application
         _watcher = null;
         if (!_paused && (_settings.HideOnTyping || _settings.HideOnIdle))
             _watcher = new CursorWatcher(_settings.Clone());
+        RegisterPauseHotkey();
 
         if (TrayIcon.GetIcons(this)?.FirstOrDefault() is { } tray)
         {
             tray.Icon = new WindowIcon(AssetLoader.Open(new Uri(_paused ? "avares://Squeaker/Assets/SqueakerPaused.ico" : "avares://Squeaker/Assets/Squeaker.ico")));
             tray.ToolTipText = _paused ? "Squeaker (paused)" : "Squeaker";
         }
+    }
+
+    // Stays registered while paused: it's how you un-pause.
+    void RegisterPauseHotkey()
+    {
+        if (_settings.PauseHotkey == _pauseHotkeyText) return;
+        _pauseHotkey?.Dispose();
+        _pauseHotkey = null;
+        _pauseHotkeyText = _settings.PauseHotkey;
+        if (!HotkeyText.TryParse(_pauseHotkeyText, out uint modifiers, out uint key)) return;
+
+        _pauseHotkey = new Hotkey(modifiers, key, TogglePause);
+        if (!_pauseHotkey.IsRegistered) Log.Write($"{_pauseHotkeyText} is taken by another app, so it won't pause Squeaker.");
+    }
+
+    void TogglePause()
+    {
+        _paused = !_paused;
+        if (MenuItem("Pause") is { } item) item.IsChecked = _paused;
+        Log.Write(_paused ? "Paused." : "Resumed.");
+        ApplySettings();
     }
 
     void ShowSettings()
@@ -89,12 +117,7 @@ public partial class App : Application
 
     void Settings_Click(object? sender, EventArgs e) => ShowSettings();
 
-    void Pause_Click(object? sender, EventArgs e)
-    {
-        _paused = !_paused;
-        if (sender is NativeMenuItem item) item.IsChecked = _paused;
-        ApplySettings();
-    }
+    void Pause_Click(object? sender, EventArgs e) => TogglePause();
 
     void Startup_Click(object? sender, EventArgs e)
     {

@@ -10,12 +10,14 @@ namespace Squeaker;
 // PowerToys' worker process. Low-level hooks are called on the thread that installed them, and
 // every key press and mouse move on the system waits for the answer, so this thread does nothing
 // that could keep them waiting: the hooks only decide, and the hiding happens after they return.
-// Settings are fixed for its lifetime; to change them, dispose it and start a new one.
+// While a full-screen or excluded app is in front it steps aside: no hooks at all, so a game's
+// mouse doesn't wait on us. Settings are fixed for its lifetime; to change them, start a new one.
 sealed class CursorWatcher : IDisposable
 {
     const uint HideMessage = WM_APP + 1;
     const uint ShowMessage = WM_APP + 2;
     const uint TickMs = 100;
+    const long StepAsideCheckMs = 500;
 
     readonly SqueakerSettings _settings;
     readonly Thread _thread;
@@ -27,9 +29,11 @@ sealed class CursorWatcher : IDisposable
     CursorState _state = null!;
     IntPtr _keyboardHook, _mouseHook;
     uint _threadId;
-    // The last foreground process we looked up, so excluded apps cost one lookup per app switch.
+    bool _steppedAside;
+    long _lastStepAsideCheck;
+    // The last foreground process we looked up, so names cost one lookup per app switch.
     uint _lastPid;
-    bool _lastPidExcluded;
+    string? _lastPidName;
 
     public bool IsInstalled { get; private set; }
 
@@ -49,19 +53,33 @@ sealed class CursorWatcher : IDisposable
         PeekMessage(out _, IntPtr.Zero, 0, 0, PM_NOREMOVE); // Makes the thread's message queue.
         _state = new CursorState(_settings, Now, CursorPosition());
 
-        var module = GetModuleHandle(null);
-        _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, _mouseProc, module, 0);
-        if (_settings.HideOnTyping) _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, module, 0);
-        IsInstalled = _mouseHook != IntPtr.Zero && (_keyboardHook != IntPtr.Zero || !_settings.HideOnTyping);
-        if (!IsInstalled) Log.Write($"Couldn't hook the keyboard and mouse (error {Marshal.GetLastWin32Error()}).");
+        IsInstalled = Hook();
         _ready.Set();
 
         if (IsInstalled) Loop();
 
-        if (_keyboardHook != IntPtr.Zero) UnhookWindowsHookEx(_keyboardHook);
-        if (_mouseHook != IntPtr.Zero) UnhookWindowsHookEx(_mouseHook);
+        Unhook();
         Apply(_state.Stop());
         _hider.Show();
+    }
+
+    bool Hook()
+    {
+        var module = GetModuleHandle(null);
+        _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, _mouseProc, module, 0);
+        if (_settings.HideOnTyping) _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, module, 0);
+        if (_mouseHook != IntPtr.Zero && (_keyboardHook != IntPtr.Zero || !_settings.HideOnTyping)) return true;
+
+        Log.Write($"Couldn't hook the keyboard and mouse (error {Marshal.GetLastWin32Error()}).");
+        Unhook();
+        return false;
+    }
+
+    void Unhook()
+    {
+        if (_keyboardHook != IntPtr.Zero) UnhookWindowsHookEx(_keyboardHook);
+        if (_mouseHook != IntPtr.Zero) UnhookWindowsHookEx(_mouseHook);
+        _keyboardHook = _mouseHook = IntPtr.Zero;
     }
 
     void Loop()
@@ -80,7 +98,30 @@ sealed class CursorWatcher : IDisposable
                 else DispatchMessage(ref msg);
             }
 
-            Apply(_state.OnTimer(Now, CursorPosition()));
+            if (Now - _lastStepAsideCheck >= StepAsideCheckMs) CheckStepAside();
+            if (!_steppedAside) Apply(_state.OnTimer(Now, CursorPosition()));
+        }
+    }
+
+    // Gets out of the way while a full-screen or excluded app is in front, and comes back after.
+    void CheckStepAside()
+    {
+        _lastStepAsideCheck = Now;
+        bool fullScreen = _settings.StepAsideForFullScreen && ForegroundIsFullScreen();
+        bool stepAside = fullScreen || ForegroundExcluded();
+        if (stepAside == _steppedAside) return;
+
+        _steppedAside = stepAside;
+        if (stepAside)
+        {
+            Unhook();
+            Apply(_state.Stop());
+            Log.Write($"Stepped aside for {ForegroundName() ?? "an app"} ({(fullScreen ? "full screen" : "excluded")}).");
+        }
+        else
+        {
+            Log.Write("Back on.");
+            if (Hook()) _state = new CursorState(_settings, Now, CursorPosition());
         }
     }
 
@@ -88,7 +129,10 @@ sealed class CursorWatcher : IDisposable
     {
         if (action == CursorAction.Hide)
         {
-            if (ForegroundExcluded() || !_hider.Hide()) _state.HideFailed(Now);
+            // Check now rather than at the next half-second check, so the first key in a game hides nothing.
+            // It also catches hides the hooks queued just before stepping aside.
+            CheckStepAside();
+            if (_steppedAside || !_hider.Hide()) _state.HideFailed(Now);
         }
         else if (action == CursorAction.Show && !_hider.Show())
         {
@@ -137,23 +181,47 @@ sealed class CursorWatcher : IDisposable
 
     static bool IsDown(int key) => (GetAsyncKeyState(key) & 0x8000) != 0;
 
-    bool ForegroundExcluded()
+    bool ForegroundExcluded() =>
+        _settings.ExcludedApps.Count > 0 && ForegroundName() is { } name && _settings.IsExcluded(name);
+
+    string? ForegroundName()
     {
-        if (_settings.ExcludedApps.Count == 0) return false;
         GetWindowThreadProcessId(GetForegroundWindow(), out uint pid);
-        if (pid == _lastPid) return _lastPidExcluded;
+        if (pid == _lastPid) return _lastPidName;
 
         _lastPid = pid;
         try
         {
             using var process = Process.GetProcessById((int)pid);
-            _lastPidExcluded = _settings.IsExcluded(process.ProcessName);
+            _lastPidName = process.ProcessName;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
         {
-            _lastPidExcluded = false;
+            _lastPidName = null;
         }
-        return _lastPidExcluded;
+        return _lastPidName;
+    }
+
+    // Covers its whole monitor and has no title bar: a game (exclusive or borderless), an F11
+    // browser, a full-screen video. Ordinary maximized windows keep their title bar style, which
+    // matters with an auto-hiding taskbar, where they cover the monitor too.
+    static bool ForegroundIsFullScreen()
+    {
+        var window = GetForegroundWindow();
+        if (window == IntPtr.Zero || (GetWindowLongPtr(window, GWL_STYLE) & WS_CAPTION) == WS_CAPTION ||
+            !GetWindowRect(window, out var rect))
+            return false;
+
+        // The desktop covers the screen too.
+        var name = new char[16];
+        var className = new string(name, 0, GetClassName(window, name, name.Length));
+        if (className is "Progman" or "WorkerW") return false;
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        var monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONULL);
+        if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info)) return false;
+        var screen = info.rcMonitor;
+        return rect.Left <= screen.Left && rect.Top <= screen.Top && rect.Right >= screen.Right && rect.Bottom >= screen.Bottom;
     }
 
     static long Now => (long)GetTickCount64();

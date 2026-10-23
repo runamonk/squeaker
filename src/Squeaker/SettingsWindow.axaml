@@ -26,6 +26,14 @@
                 <TextBlock Classes="section" Text="General" />
                 <CheckBox x:Name="StartWithWindowsBox" Content="Start with Windows" />
 
+                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0">
+                    <TextBlock Text="Pause and resume hotkey" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBox Grid.Column="1" x:Name="PauseHotkeyBox" Width="170" IsReadOnly="True"
+                             PlaceholderText="None" />
+                    <Button Grid.Column="2" Classes="action" Content="Clear" Margin="8,0,0,0" Click="ClearHotkey_Click" />
+                </Grid>
+                <TextBlock Classes="note" Margin="0,0,0,6" Text="Click the box and press the keys. Needs Ctrl, Alt or Win, plus a letter, digit or F-key." />
+
                 <!-- Only shown while Windows' own version is switched on. -->
                 <Border x:Name="WindowsHidingPanel" IsVisible="False" Margin="0,12,0,0" Padding="14,10"
                         Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppLineBrush}"
@@ -63,8 +71,12 @@
                 </Grid>
                 <TextBlock Classes="note" Margin="0,0,0,6" Text="0 turns it off: it stays hidden until you touch the mouse." />
 
+                <TextBlock Classes="section" Text="Games" />
+                <CheckBox x:Name="StepAsideBox" Content="Step aside while a full-screen app is in front" />
+                <TextBlock Classes="note" Text="Games (full screen or borderless), full-screen videos and the like. Squeaker lets go of the keyboard and mouse completely, so it adds nothing to mouse latency and can't flicker the cursor. Windowed games: add them below." />
+
                 <TextBlock Classes="section" Text="Excluded apps" />
-                <TextBlock Classes="note" Margin="0,0,0,8" Text="Never hide the cursor while one of these is in front. One process name per line, e.g. mstsc or game.exe." />
+                <TextBlock Classes="note" Margin="0,0,0,8" Text="Squeaker steps aside the same way while one of these is in front. One process name per line, e.g. mstsc or game.exe." />
                 <TextBox x:Name="ExcludedBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="120" />
             </StackPanel>
         </ScrollViewer>

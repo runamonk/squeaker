@@ -21,8 +21,12 @@ public sealed class SqueakerSettings
     public int MoveThreshold { get; set; } = 2;
     // Bring the cursor back this long after the last key, without touching the mouse. 0: only the mouse brings it back.
     public int ShowAfterTypingSeconds { get; set; }
-    // Process names that never get the cursor hidden, e.g. "mstsc" or "game.exe".
+    // Process names Squeaker steps aside for, e.g. "mstsc" or "game.exe".
     public List<string> ExcludedApps { get; set; } = [];
+    // Step aside (unhook entirely) while a full-screen app, like a game or a video, is in front.
+    public bool StepAsideForFullScreen { get; set; } = true;
+    // Pauses and resumes Squeaker, e.g. "Ctrl+Alt+Shift+M". Empty: no hotkey.
+    public string PauseHotkey { get; set; } = "Ctrl+Alt+Shift+M";
 
     public bool IsExcluded(string processName)
     {
@@ -35,6 +39,7 @@ public sealed class SqueakerSettings
     public void Normalize()
     {
         ExcludedApps ??= [];
+        if (!HotkeyText.TryParse(PauseHotkey, out _, out _)) PauseHotkey = "";
         IdleSeconds = Math.Clamp(IdleSeconds, MinIdleSeconds, MaxIdleSeconds);
         MoveThreshold = Math.Clamp(MoveThreshold, 1, 100);
         ShowAfterTypingSeconds = Math.Clamp(ShowAfterTypingSeconds, 0, 600);
