@@ -62,6 +62,10 @@ dotnet test
 
 `publish.cmd` makes a self-contained release build.
 
+GitHub Actions builds and tests every push to `main` and every pull request, and keeps the zip
+as a build artifact. Push a tag like `v1.2.3` to turn it into a release (`v1.2.3-test` makes a
+pre-release).
+
 The icon and logos are drawn by `branding/make_branding.py` (needs Pillow):
 `python branding/make_branding.py`.
 

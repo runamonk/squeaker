@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write   # needed to create releases
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        run: dotnet test tests/Squeaker.Tests -c Release
+
+      - name: Version
+        shell: pwsh
+        run: |
+          $v = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}'.TrimStart('v') } else { '0.0.0-ci.${{ github.run_number }}' }
+          if ($v -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Tag '${{ github.ref_name }}' is not a version. Use v1.2.3, or v1.2.3-test for a pre-release." }
+          "VERSION=$v" >> $env:GITHUB_ENV
+
+      - name: Publish
+        run: dotnet publish src/Squeaker -c Release -r win-x64 --self-contained true -p:Version=${{ env.VERSION }} -o artifacts/Squeaker
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive artifacts/Squeaker/* Squeaker-${{ env.VERSION }}-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Squeaker-${{ env.VERSION }}
+          path: Squeaker-*.zip
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Squeaker-*.zip
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
