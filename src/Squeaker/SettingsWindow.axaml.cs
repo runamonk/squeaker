@@ -20,7 +20,9 @@ public partial class SettingsWindow : Window
         _settings = settings;
         _save = save;
 
+        Title = $"Squeaker {Updates.AppVersion} Settings";
         StartWithWindowsBox.IsChecked = Startup.IsEnabled;
+        CheckForUpdatesBox.IsChecked = settings.CheckForUpdates;
         HideOnTypingBox.IsChecked = settings.HideOnTyping;
         IgnoreShortcutsBox.IsChecked = settings.IgnoreShortcuts;
         MoveToCaretBox.IsChecked = settings.MoveToCaret;
@@ -64,6 +66,7 @@ public partial class SettingsWindow : Window
             .ToList();
         _settings.StepAsideForFullScreen = StepAsideBox.IsChecked == true;
         _settings.PauseHotkey = PauseHotkeyBox.Text ?? "";
+        _settings.CheckForUpdates = CheckForUpdatesBox.IsChecked == true;
         _settings.Normalize();
         _save();
 

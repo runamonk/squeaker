@@ -32,6 +32,12 @@ jobs:
       - name: Publish
         run: dotnet publish src/Squeaker -c Release -r win-x64 --self-contained true -p:Version=${{ env.VERSION }} -o artifacts/Squeaker
 
+      - name: Publish updater
+        shell: pwsh
+        run: |
+          dotnet publish src/Squeaker.Updater -c Release -p:Version=${{ env.VERSION }} -o artifacts/updater
+          Copy-Item artifacts/updater/SqueakerUpdater.exe artifacts/Squeaker/
+
       - name: Zip
         shell: pwsh
         run: Compress-Archive artifacts/Squeaker/* Squeaker-${{ env.VERSION }}-win-x64.zip
@@ -47,4 +53,5 @@ jobs:
         with:
           files: Squeaker-*.zip
           generate_release_notes: true
+          # Tags like v1.2.3-test are pre-releases, which the in-app updater never offers.
           prerelease: ${{ contains(github.ref_name, '-') }}

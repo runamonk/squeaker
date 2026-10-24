@@ -29,6 +29,8 @@ public sealed class SqueakerSettings
     public bool StepAsideForFullScreen { get; set; } = true;
     // Pauses and resumes Squeaker, e.g. "Ctrl+Alt+Shift+M". Empty: no hotkey.
     public string PauseHotkey { get; set; } = "Ctrl+Alt+Shift+M";
+    // Look for a new release on GitHub once a day. It always asks before downloading.
+    public bool CheckForUpdates { get; set; } = true;
 
     public bool IsExcluded(string processName)
     {

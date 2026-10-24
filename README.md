@@ -30,6 +30,15 @@ cursor gets out of the way; touch the mouse and it's back.
 - **Never gets stuck hidden.** A small watchdog copy of Squeaker waits for it to exit, however it
   goes (a crash, End task), and puts the cursors back.
 
+## Updates
+
+Squeaker looks for a new release on GitHub 30 seconds after it starts and once a day after that
+(turn it off in Settings), or right away with **Check for updates...** in the tray menu. It always
+asks first. Say yes and it downloads the release, checks it against GitHub's SHA-256 checksum,
+exits, and `SqueakerUpdater.exe` swaps the files and starts it again. The previous version is
+kept in a `backup` folder next to it. Pre-releases (`v1.2.3-test`) are never offered, and
+development builds (version `0.0.0-dev`, like the ones `publish.cmd` makes) never update.
+
 ## How it hides the cursor
 
 The same way PowerToys does: it swaps every system cursor for a see-through one with
@@ -40,7 +49,7 @@ own that does nothing else, so typing never waits on the UI.
 ## Tray menu
 
 Click the icon for Settings. Right-click for Settings, Pause (the icon goes grey), Start with
-Windows, Open settings folder and Exit.
+Windows, Open settings folder, Check for updates and Exit. Hover over it for the version.
 
 ## Files
 

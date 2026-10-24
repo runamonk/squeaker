@@ -25,6 +25,8 @@
             <StackPanel Margin="24,6,24,24">
                 <TextBlock Classes="section" Text="General" />
                 <CheckBox x:Name="StartWithWindowsBox" Content="Start with Windows" />
+                <CheckBox x:Name="CheckForUpdatesBox" Content="Check for updates automatically" Margin="0,6,0,0" />
+                <TextBlock Classes="note" Text="Once a day, on GitHub. It always asks before downloading anything." />
 
                 <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0">
                     <TextBlock Text="Pause and resume hotkey" VerticalAlignment="Center" TextWrapping="Wrap" />

@@ -16,6 +16,9 @@ public partial class App : Application
     Hotkey? _pauseHotkey;
     string _pauseHotkeyText = "";
     bool _paused;
+    Updates? _updates;
+    // Download progress, shown in the tray tooltip while there is some.
+    string? _updateStatus;
 
     public override void Initialize()
     {
@@ -36,12 +39,17 @@ public partial class App : Application
 
             _settings = SqueakerSettings.Load(AppPaths.SettingsFile, out var problem);
             if (problem is not null) Log.Write(problem);
-            Log.Write("Started.");
+            Log.Write($"Started {Updates.AppVersion}.");
             if (CursorHider.WindowsHidesWhileTyping)
                 Log.Write("Windows' own \"Hide pointer while typing\" is on; it overrides some settings in older apps. Settings can turn it off.");
 
             if (MenuItem("Start with Windows") is { } startup) startup.IsChecked = Startup.IsEnabled;
             ApplySettings();
+            _updates = new Updates(() => _settings, status =>
+            {
+                _updateStatus = status;
+                UpdateTrayText();
+            }, () => desktop.Shutdown());
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -70,10 +78,14 @@ public partial class App : Application
         RegisterPauseHotkey();
 
         if (TrayIcon.GetIcons(this)?.FirstOrDefault() is { } tray)
-        {
             tray.Icon = new WindowIcon(AssetLoader.Open(new Uri(_paused ? "avares://Squeaker/Assets/SqueakerPaused.ico" : "avares://Squeaker/Assets/Squeaker.ico")));
-            tray.ToolTipText = _paused ? "Squeaker (paused)" : "Squeaker";
-        }
+        UpdateTrayText();
+    }
+
+    void UpdateTrayText()
+    {
+        if (TrayIcon.GetIcons(this)?.FirstOrDefault() is { } tray)
+            tray.ToolTipText = _updateStatus ?? $"Squeaker {Updates.AppVersion}{(_paused ? " (paused)" : "")}";
     }
 
     // Stays registered while paused: it's how you un-pause.
@@ -118,6 +130,11 @@ public partial class App : Application
     void Settings_Click(object? sender, EventArgs e) => ShowSettings();
 
     void Pause_Click(object? sender, EventArgs e) => TogglePause();
+
+    async void CheckForUpdates_Click(object? sender, EventArgs e)
+    {
+        if (_updates is not null) await _updates.Check(quiet: false);
+    }
 
     void Startup_Click(object? sender, EventArgs e)
     {

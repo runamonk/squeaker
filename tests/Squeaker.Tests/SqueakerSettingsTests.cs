@@ -21,6 +21,7 @@ public sealed class SqueakerSettingsTests : IDisposable
         Assert.True(File.Exists(SettingsPath));
         Assert.True(settings.HideOnTyping);
         Assert.False(settings.HideOnIdle);
+        Assert.True(settings.CheckForUpdates);
     }
 
     [Fact]

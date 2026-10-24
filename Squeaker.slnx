@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Squeaker.Core/Squeaker.Core.csproj" />
     <Project Path="src/Squeaker/Squeaker.csproj" />
+    <Project Path="src/Squeaker.Updater/Squeaker.Updater.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Squeaker.Tests/Squeaker.Tests.csproj" />
