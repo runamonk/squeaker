@@ -97,6 +97,9 @@ static class Native
     [DllImport("user32.dll")]
     public static extern bool GetCursorPos(out POINT point);
 
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int x, int y);
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr CreateCursor(IntPtr hInst, int xHotSpot, int yHotSpot, int width, int height, byte[] andPlane, byte[] xorPlane);
 
@@ -169,6 +172,37 @@ static class Native
 
     [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
     public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct GUITHREADINFO
+    {
+        public int cbSize;
+        public uint flags;
+        public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret;
+        public RECT rcCaret;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetGUIThreadInfo(uint threadId, ref GUITHREADINFO info);
+
+    // Accessibility
+    public const uint OBJID_CARET = 0xFFFFFFF8;
+
+    [DllImport("oleacc.dll")]
+    public static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint objectId, ref Guid iid,
+        [MarshalAs(UnmanagedType.IUnknown)] out object? result);
+
+    // Only accLocation is used. The placeholders keep it in its vtable slot: Chromium's caret
+    // object doesn't answer through IDispatch.
+    [ComImport, Guid("618736e0-3c3d-11cf-810c-00aa00389b71"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IAccessible
+    {
+        void GetTypeInfoCount(); void GetTypeInfo(); void GetIDsOfNames(); void Invoke();
+        void get_accParent(); void get_accChildCount(); void get_accChild(); void get_accName(); void get_accValue();
+        void get_accDescription(); void get_accRole(); void get_accState(); void get_accHelp(); void get_accHelpTopic();
+        void get_accKeyboardShortcut(); void get_accFocus(); void get_accSelection(); void get_accDefaultAction(); void accSelect();
+        [PreserveSig] int accLocation(out int left, out int top, out int width, out int height, object child);
+    }
 
     // Hotkeys
     public const uint MOD_ALT = 0x0001;

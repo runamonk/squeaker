@@ -16,6 +16,7 @@ sealed class CursorWatcher : IDisposable
 {
     const uint HideMessage = WM_APP + 1;
     const uint ShowMessage = WM_APP + 2;
+    const uint MoveMessage = WM_APP + 3;
     const uint TickMs = 100;
     const long StepAsideCheckMs = 500;
 
@@ -95,6 +96,7 @@ sealed class CursorWatcher : IDisposable
                 if (msg.message == WM_QUIT) return;
                 if (msg.message == HideMessage) Apply(CursorAction.Hide);
                 else if (msg.message == ShowMessage) Apply(CursorAction.Show);
+                else if (msg.message == MoveMessage) MoveHiddenCursor(new((int)msg.wParam, (int)msg.lParam));
                 else DispatchMessage(ref msg);
             }
 
@@ -133,11 +135,38 @@ sealed class CursorWatcher : IDisposable
             // It also catches hides the hooks queued just before stepping aside.
             CheckStepAside();
             if (_steppedAside || !_hider.Hide()) _state.HideFailed(Now);
+            else if (_settings.MoveToCaret && _state.HiddenByTyping) FindCaret();
         }
         else if (action == CursorAction.Show && !_hider.Show())
         {
             _state.ShowFailed();
         }
+    }
+
+    // Asking another app where its caret is can be slow, and this thread mustn't wait, so it's
+    // done elsewhere and the answer posted back. Only once per hide: moving it is a mouse move to
+    // the app, and every one of those risks a hover popup.
+    void FindCaret()
+    {
+        uint threadId = _threadId;
+        Task.Run(() =>
+        {
+            if (CaretFinder.Find() is not { } caret) return;
+            // To the right of the caret on its line. That's usually blank (you type at the end of
+            // lines), so nothing to hover over, and it's still right where you're looking.
+            int height = caret.Bottom - caret.Top;
+            PostThreadMessage(threadId, MoveMessage, caret.Right + height, (caret.Top + caret.Bottom) / 2);
+        });
+    }
+
+    void MoveHiddenCursor(Core.Point to)
+    {
+        // The mouse brought it back while we were looking: leave it where the mouse put it.
+        if (!_state.HiddenByTyping || !_hider.IsHidden) return;
+        _state.MovedTo(to);
+        SetCursorPos(to.X, to.Y);
+        // Windows keeps it on screen, so it may land short.
+        _state.MovedTo(CursorPosition());
     }
 
     // Hooks only queue the work. Hiding means 13 SetSystemCursor calls, which isn't for in here.

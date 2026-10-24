@@ -23,6 +23,7 @@ public partial class SettingsWindow : Window
         StartWithWindowsBox.IsChecked = Startup.IsEnabled;
         HideOnTypingBox.IsChecked = settings.HideOnTyping;
         IgnoreShortcutsBox.IsChecked = settings.IgnoreShortcuts;
+        MoveToCaretBox.IsChecked = settings.MoveToCaret;
         HideOnIdleBox.IsChecked = settings.HideOnIdle;
         IdleSecondsBox.Value = settings.IdleSeconds;
         MoveThresholdBox.Value = settings.MoveThreshold;
@@ -43,6 +44,7 @@ public partial class SettingsWindow : Window
     void UpdateEnabled()
     {
         IgnoreShortcutsBox.IsEnabled = HideOnTypingBox.IsChecked == true;
+        MoveToCaretBox.IsEnabled = HideOnTypingBox.IsChecked == true;
         ShowAfterTypingBox.IsEnabled = HideOnTypingBox.IsChecked == true;
         IdleSecondsBox.IsEnabled = HideOnIdleBox.IsChecked == true;
     }
@@ -51,6 +53,7 @@ public partial class SettingsWindow : Window
     {
         _settings.HideOnTyping = HideOnTypingBox.IsChecked == true;
         _settings.IgnoreShortcuts = IgnoreShortcutsBox.IsChecked == true;
+        _settings.MoveToCaret = MoveToCaretBox.IsChecked == true;
         _settings.HideOnIdle = HideOnIdleBox.IsChecked == true;
         _settings.IdleSeconds = (int)(IdleSecondsBox.Value ?? SqueakerSettings.MinIdleSeconds);
         _settings.MoveThreshold = (int)(MoveThresholdBox.Value ?? 2);

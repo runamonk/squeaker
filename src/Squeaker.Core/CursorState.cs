@@ -19,6 +19,9 @@ public sealed class CursorState
 
     public bool IsHidden { get; private set; }
 
+    // Hidden by typing, not by the mouse sitting idle.
+    public bool HiddenByTyping => IsHidden && _hiddenByTyping;
+
     public CursorState(SqueakerSettings settings, long now, Point cursor)
     {
         _settings = settings;
@@ -101,6 +104,9 @@ public sealed class CursorState
     }
 
     public void ShowFailed() => IsHidden = true;
+
+    // We moved the hidden cursor ourselves (to the caret). Measure from there, so it doesn't count as the mouse moving.
+    public void MovedTo(Point cursor) => _hiddenAt = cursor;
 
     bool MovedFar(Point cursor)
     {

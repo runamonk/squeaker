@@ -26,12 +26,13 @@ public sealed class SqueakerSettingsTests : IDisposable
     [Fact]
     public void SavedSettings_RoundTrip()
     {
-        new SqueakerSettings { HideOnIdle = true, IdleSeconds = 12, ExcludedApps = ["mstsc"] }.Save(SettingsPath);
+        new SqueakerSettings { HideOnIdle = true, IdleSeconds = 12, MoveToCaret = true, ExcludedApps = ["mstsc"] }.Save(SettingsPath);
 
         var loaded = SqueakerSettings.Load(SettingsPath, out var problem);
 
         Assert.Null(problem);
         Assert.True(loaded.HideOnIdle);
+        Assert.True(loaded.MoveToCaret);
         Assert.Equal(12, loaded.IdleSeconds);
         Assert.Equal(["mstsc"], loaded.ExcludedApps);
     }

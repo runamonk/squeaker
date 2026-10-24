@@ -15,6 +15,10 @@ cursor gets out of the way; touch the mouse and it's back.
 - **Hide while typing.** Shift, Ctrl, Alt and Win on their own don't count, and nor do keys sent
   by other programs (AutoHotkey, remote tools, on-screen keyboards). Shortcuts like Ctrl+C and
   Alt+Tab leave it alone too, unless you turn that off.
+- **Move it to where you're typing** (optional): when typing hides it, it's parked just right
+  of the text cursor, so it comes back there instead of wherever you left it. Works in classic
+  apps and Chromium ones (VS Code, browsers); apps that don't say where their text cursor is are
+  left alone.
 - **Hide when idle** (optional): hides after the mouse hasn't moved for 1–60 seconds.
 - **Comes back** when you move the mouse further than a couple of pixels, click or scroll; or,
   optionally, a few seconds after you stop typing.

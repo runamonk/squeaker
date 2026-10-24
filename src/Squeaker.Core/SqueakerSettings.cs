@@ -17,6 +17,8 @@ public sealed class SqueakerSettings
     public int IdleSeconds { get; set; } = 5;
     // Keys pressed with Ctrl, Alt or Win held (shortcuts, Alt+Tab) leave the cursor alone.
     public bool IgnoreShortcuts { get; set; } = true;
+    // When typing hides the cursor, move it next to the text caret, so it comes back where you're typing.
+    public bool MoveToCaret { get; set; }
     // How far (pixels) the mouse has to move to bring the cursor back, so a bumped desk doesn't.
     public int MoveThreshold { get; set; } = 2;
     // Bring the cursor back this long after the last key, without touching the mouse. 0: only the mouse brings it back.

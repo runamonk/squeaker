@@ -129,6 +129,34 @@ public sealed class CursorStateTests
     }
 
     [Fact]
+    public void MovedTo_DoesntCountAsTheMouseMoving()
+    {
+        var state = Make();
+        state.OnKey(10, Origin, KeyA, false);
+        var caret = new Point(900, 500);
+        state.MovedTo(caret);
+
+        Assert.Equal(CursorAction.None, state.OnMouse(20, caret, MouseInput.Move));
+        Assert.Equal(CursorAction.None, state.OnTimer(100, caret));
+        Assert.Equal(CursorAction.Show, state.OnMouse(30, new(910, 500), MouseInput.Move));
+    }
+
+    [Fact]
+    public void HiddenByTyping_OnlyForTyping()
+    {
+        var typed = Make();
+        Assert.False(typed.HiddenByTyping);
+        typed.OnKey(10, Origin, KeyA, false);
+        Assert.True(typed.HiddenByTyping);
+        typed.OnMouse(20, Origin, MouseInput.ButtonOrWheel);
+        Assert.False(typed.HiddenByTyping);
+
+        var idle = Make(s => { s.HideOnIdle = true; s.IdleSeconds = 1; });
+        Assert.Equal(CursorAction.Hide, idle.OnTimer(1000, Origin));
+        Assert.False(idle.HiddenByTyping);
+    }
+
+    [Fact]
     public void Stop_ShowsIfHidden()
     {
         var state = Make();
